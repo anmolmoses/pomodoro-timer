@@ -4,22 +4,41 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install
 
       - name: Build
         run: npm run build
+
+      - name: Verify build output
+        run: |
+          if [ -d dist ]; then
+            echo '✅ dist/ exists'
+            ls -la dist/
+          elif [ -d build ]; then
+            echo '✅ build/ exists'
+            ls -la build/
+          elif [ -f index.html ]; then
+            echo '✅ index.html in root'
+          else
+            echo '❌ No build output found'
+            ls -la
+            exit 1
+          fi
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3
