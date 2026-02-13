@@ -1,0 +1,19 @@
+{
+  "name": "FocusFlow",
+  "short_name": "Focus",
+  "description": "Sleek productivity timer with stats tracking, sounds, and streak counter",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0F0F1A",
+  "background_color": "#0F0F1A",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"]
+}
