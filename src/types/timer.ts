@@ -1,39 +1,42 @@
-export type TimerPhase = 'work' | 'shortBreak' | 'longBreak';
-export type TimerState = 'idle' | 'running' | 'paused';
+export type TimerState = 'idle' | 'running' | 'paused' | 'completed' | 'break';
 
 export interface TimerSettings {
-  workDuration: number;
-  shortBreakDuration: number;
-  longBreakDuration: number;
-  longBreakInterval: number;
+  workDuration: number;      // minutes
+  shortBreak: number;        // minutes
+  longBreak: number;         // minutes
+  longBreakInterval: number; // every Nth work session triggers long break
 }
+
+export interface TimerSession {
+  id: string;
+  startedAt: string; // ISO string
+  duration: number;  // seconds
+  type: 'work' | 'break';
+  completed: boolean;
+}
+
+// Messages sent TO the worker
+export type WorkerInMessage =
+  | { type: 'START'; duration: number }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME' }
+  | { type: 'RESET' };
+
+// Messages sent FROM the worker
+export type WorkerOutMessage =
+  | { type: 'TICK'; remaining: number }
+  | { type: 'COMPLETE' };
 
 export interface TimerContextValue {
   remaining: number;
-  total: number;
-  phase: TimerPhase;
+  totalDuration: number;
   state: TimerState;
-  sessionsCompleted: number;
+  sessionCount: number;
+  settings: TimerSettings;
+  setSettings: (s: Partial<TimerSettings>) => void;
   start: () => void;
   pause: () => void;
+  resume: () => void;
   reset: () => void;
   skip: () => void;
 }
-
-export interface SettingsContextValue {
-  settings: TimerSettings;
-  updateSettings: (patch: Partial<TimerSettings>) => void;
-}
-
-export const DEFAULT_SETTINGS: TimerSettings = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
-  longBreakInterval: 4,
-};
-
-export const PHASE_LABELS: Record<TimerPhase, string> = {
-  work: 'Focus',
-  shortBreak: 'Short Break',
-  longBreak: 'Long Break',
-};
