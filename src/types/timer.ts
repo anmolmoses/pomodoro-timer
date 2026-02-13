@@ -1,32 +1,33 @@
-/**
- * Shared types for the FocusFlow timer application.
- * Used across services, components, and hooks.
- */
+// Timer state machine states
+export type TimerState = 'idle' | 'running' | 'paused' | 'completed' | 'break';
 
-export type SessionType = 'work' | 'break' | 'longBreak';
+// Session types — distinguish short vs long break for styling/stats
+export type SessionType = 'work' | 'shortBreak' | 'longBreak';
 
-export type TimerState = 'idle' | 'running' | 'paused' | 'completed';
+export interface TimerSettings {
+  workDuration: number;      // minutes
+  shortBreak: number;        // minutes
+  longBreak: number;         // minutes
+  longBreakInterval: number; // work sessions before long break
+}
 
 export interface TimerSession {
   id: string;
+  startedAt: string; // ISO 8601
+  duration: number;  // seconds
   type: SessionType;
-  duration: number;        // planned duration in seconds
-  elapsed: number;         // actual elapsed in seconds
-  completed: boolean;      // true if ran to completion (not skipped/cancelled)
-  startedAt: string;       // ISO 8601 timestamp
-  completedAt: string;     // ISO 8601 timestamp
+  completed: boolean;
 }
 
-export interface DailyBreakdown {
-  date: string;            // YYYY-MM-DD local date
-  sessions: number;
-  minutes: number;
-}
+// Messages sent TO the worker
+export type WorkerInMessage =
+  | { type: 'START'; duration: number }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME' }
+  | { type: 'RESET' };
 
-export interface StatsOverview {
-  totalSessions: number;
-  totalMinutes: number;
-  todaySessions: number;
-  todayMinutes: number;
-  averagePerDay: number;
-}
+// Messages received FROM the worker
+export type WorkerOutMessage =
+  | { type: 'TICK'; remaining: number }
+  | { type: 'COMPLETE' }
+  | { type: 'RESET_ACK' };
