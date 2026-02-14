@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { PomodoroProvider, usePomodoro } from './context/PomodoroProvider';
+import { TimerPhase, TimerStatus } from './types';
 import Background from './components/Background';
 import TimerRing from './components/TimerRing';
 import Controls from './components/Controls';
 import SessionTracker from './components/SessionTracker';
 import SettingsModal from './components/SettingsModal';
+import { CelebrationOverlay } from './components/Celebration';
+import Toast from './components/Toast';
+import Onboarding from './components/Onboarding';
+import { useKeyboard } from './hooks/useKeyboard';
 
 /** Gear icon SVG */
 function GearIcon() {
@@ -43,6 +48,42 @@ function AppContent() {
   } = usePomodoro();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const prevPhaseRef = useRef<TimerPhase>(state.phase);
+
+  // Detect focus session completion → show celebration
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    const curr = state.phase;
+    if (
+      prev === TimerPhase.Focus &&
+      (curr === TimerPhase.ShortBreak || curr === TimerPhase.LongBreak)
+    ) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 1500);
+      return () => clearTimeout(timer);
+    }
+    prevPhaseRef.current = curr;
+  }, [state.phase]);
+
+  // Toast helper
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  // Keyboard shortcuts (Space, R, S)
+  useKeyboard({
+    status: state.status,
+    phase: state.phase,
+    start,
+    pause,
+    resume,
+    reset,
+    skip,
+    onToast: showToast,
+  });
 
   return (
     <>
@@ -83,6 +124,9 @@ function AppContent() {
             totalRequired={settings.longBreakInterval}
             currentPhase={state.phase}
           />
+
+          {/* Onboarding hint for first-time visitors */}
+          <Onboarding />
         </div>
       </div>
 
@@ -92,6 +136,12 @@ function AppContent() {
         settings={settings}
         onUpdate={updateSettings}
       />
+
+      {/* Celebration overlay on focus session complete */}
+      <CelebrationOverlay show={showCelebration} />
+
+      {/* Toast notifications */}
+      <Toast message={toast ?? ''} visible={!!toast} />
     </>
   );
 }
