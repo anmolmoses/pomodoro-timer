@@ -1,7 +1,25 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { DEFAULT_SETTINGS, type TimerSettings, type SettingsContextValue } from '../types/timer';
 
 const STORAGE_KEY = 'focusflow-settings';
+
+export interface TimerSettings {
+  workDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
+  longBreakInterval: number;
+}
+
+const DEFAULT_SETTINGS: TimerSettings = {
+  workDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  longBreakInterval: 4,
+};
+
+export interface SettingsContextValue {
+  settings: TimerSettings;
+  updateSettings: (patch: Partial<TimerSettings>) => void;
+}
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PomodoroProvider, usePomodoroContext } from './context/PomodoroContext';
+import { PomodoroProvider, usePomodoro } from './context/PomodoroProvider';
 import Background from './components/Background';
 import TimerRing from './components/TimerRing';
 import Controls from './components/Controls';
@@ -40,7 +40,7 @@ function AppContent() {
     reset,
     skip,
     updateSettings,
-  } = usePomodoroContext();
+  } = usePomodoro();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 

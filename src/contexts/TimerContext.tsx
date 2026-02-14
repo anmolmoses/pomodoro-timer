@@ -1,8 +1,23 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 import { useSettings } from './SettingsContext';
-import type { TimerPhase, TimerState, TimerContextValue } from '../types/timer';
 
-const TimerContext = createContext<TimerContextValue | null>(null);
+type TimerPhase = 'work' | 'shortBreak' | 'longBreak';
+type TimerState = 'idle' | 'running' | 'paused';
+
+interface TimerContextShape {
+  remaining: number;
+  total: number;
+  phase: TimerPhase;
+  state: TimerState;
+  sessionCount: number;
+  start: () => void;
+  pause: () => void;
+  reset: () => void;
+  skip: () => void;
+  showCelebration: boolean;
+}
+
+const TimerContext = createContext<TimerContextShape | null>(null);
 
 function phaseDuration(phase: TimerPhase, settings: { workDuration: number; shortBreakDuration: number; longBreakDuration: number }): number {
   switch (phase) {
@@ -16,14 +31,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const [phase, setPhase] = useState<TimerPhase>('work');
   const [state, setState] = useState<TimerState>('idle');
-  const [sessionsCompleted, setSessions] = useState(0);
+  const [sessionCount, setSessions] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
 
   const total = phaseDuration(phase, settings);
   const [remaining, setRemaining] = useState(total);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Sync remaining when settings change and timer is idle
   useEffect(() => {
     if (state === 'idle') {
       setRemaining(phaseDuration(phase, settings));
@@ -40,10 +54,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const advancePhase = useCallback(() => {
     clearTimer();
     let nextPhase: TimerPhase;
-    let newSessions = sessionsCompleted;
+    let newSessions = sessionCount;
 
     if (phase === 'work') {
-      newSessions = sessionsCompleted + 1;
+      newSessions = sessionCount + 1;
       setSessions(newSessions);
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 1500);
@@ -61,9 +75,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     const dur = phaseDuration(nextPhase, settings);
     setRemaining(dur);
     setState('idle');
-  }, [phase, sessionsCompleted, settings, clearTimer]);
+  }, [phase, sessionCount, settings, clearTimer]);
 
-  // Tick logic
   useEffect(() => {
     if (state === 'running') {
       intervalRef.current = setInterval(() => {
@@ -93,14 +106,14 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }, [state, advancePhase]);
 
   return (
-    <TimerContext.Provider value={{ remaining, total, phase, state, sessionsCompleted, start, pause, reset, skip, showCelebration } as TimerContextValue & { showCelebration: boolean }}>
+    <TimerContext.Provider value={{ remaining, total, phase, state, sessionCount, start, pause, reset, skip, showCelebration }}>
       {children}
     </TimerContext.Provider>
   );
 }
 
-export function useTimer(): TimerContextValue & { showCelebration: boolean } {
+export function useTimer(): TimerContextShape {
   const ctx = useContext(TimerContext);
   if (!ctx) throw new Error('useTimer must be used within TimerProvider');
-  return ctx as TimerContextValue & { showCelebration: boolean };
+  return ctx;
 }

@@ -3,14 +3,14 @@ import { useTimer } from '../contexts/TimerContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export default function StatsPanel({ expanded }: { expanded: boolean }) {
-  const { sessionsCompleted } = useTimer();
+  const { sessionCount } = useTimer();
   const { settings } = useSettings();
-  const totalMinutes = sessionsCompleted * settings.workDuration;
+  const totalMinutes = sessionCount * settings.workDuration;
 
   const stats = [
-    { label: 'Sessions', value: sessionsCompleted },
+    { label: 'Sessions', value: sessionCount },
     { label: 'Minutes', value: totalMinutes },
-    { label: 'Streak', value: `${sessionsCompleted}🔥` },
+    { label: 'Streak', value: `${sessionCount}🔥` },
   ];
 
   return (
