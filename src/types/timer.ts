@@ -1,78 +1,53 @@
-export type TimerState = 'idle' | 'running' | 'paused' | 'completed' | 'break';
+/**
+ * Timer-specific types used by TimerContext, useTimer, and useStats.
+ * Re-exports shared foundation types and defines additional types needed by hooks.
+ */
+import {
+  TimerState as _TimerState,
+  PomodoroSettings,
+  PomodoroContextValue,
+  TimerPhase,
+  TimerStatus,
+} from './index';
 
-export type TimerPhase = 'work' | 'shortBreak' | 'longBreak';
+// Re-export foundation types under the names consumers expect
+export type TimerState = _TimerState;
+export type TimerSettings = PomodoroSettings;
+export type TimerContextValue = PomodoroContextValue;
 
-export interface TimerSettings {
-  workDuration: number;          // minutes
-  shortBreakDuration: number;    // minutes
-  longBreakDuration: number;     // minutes
-  shortBreak: number;            // alias — minutes (used by useTimer hook)
-  longBreak: number;             // alias — minutes (used by useTimer hook)
-  longBreakInterval: number;     // every Nth work session triggers long break
-}
+// ============ WORKER MESSAGES ============
 
-export const DEFAULT_SETTINGS: TimerSettings = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
-  shortBreak: 5,
-  longBreak: 15,
-  longBreakInterval: 4,
-};
-
-export interface TimerSession {
-  id: string;
-  startedAt: string;   // ISO string
-  completedAt: string; // ISO string
-  duration: number;    // planned duration in seconds
-  elapsed: number;     // actual elapsed seconds
-  type: 'work' | 'break';
-  completed: boolean;
-}
-
-export interface StatsOverview {
-  totalSessions: number;
-  totalMinutes: number;
-  todaySessions: number;
-  todayMinutes: number;
-  averagePerDay: number;
-}
-
-export interface DailyBreakdown {
-  date: string;
-  sessions: number;
-  minutes: number;
-}
-
-export interface SettingsContextValue {
-  settings: TimerSettings;
-  updateSettings: (patch: Partial<TimerSettings>) => void;
-}
-
-// Messages sent TO the worker
-export type WorkerInMessage =
-  | { type: 'START'; duration: number }
-  | { type: 'PAUSE' }
-  | { type: 'RESUME' }
-  | { type: 'RESET' };
-
-// Messages sent FROM the worker
 export type WorkerOutMessage =
-  | { type: 'TICK'; remaining: number }
-  | { type: 'COMPLETE' };
+  | { type: 'TICK'; payload: { now: number } }
+  | { type: 'PHASE_COMPLETE' }
+  | { type: 'SYNC'; payload: { remainingSeconds: number } };
 
-export interface TimerContextValue {
-  remaining: number;
-  totalDuration: number;
-  state: TimerState;
-  sessionCount: number;
+export type WorkerInMessage =
+  | { type: 'START'; payload: { durationSeconds: number; now: number } }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME'; payload: { now: number } }
+  | { type: 'STOP' };
+
+// ============ STATS ============
+
+/** Breakdown of focus stats for a single day */
+export interface DailyBreakdown {
+  date: string; // ISO date string YYYY-MM-DD
+  totalFocusMinutes: number;
   sessionsCompleted: number;
-  settings: TimerSettings;
-  setSettings: (s: Partial<TimerSettings>) => void;
-  start: () => void;
-  pause: () => void;
-  resume: () => void;
-  reset: () => void;
-  skip: () => void;
-  showCelebration: boolean;
+  phases: {
+    [TimerPhase.Focus]: number;
+    [TimerPhase.ShortBreak]: number;
+    [TimerPhase.LongBreak]: number;
+  };
+}
+
+/** Aggregated statistics overview */
+export interface StatsOverview {
+  totalFocusMinutes: number;
+  totalSessions: number;
+  currentStreak: number; // consecutive days with at least one session
+  longestStreak: number;
+  dailyAverage: number; // average focus minutes per active day
+  dailyBreakdown: DailyBreakdown[];
 }
