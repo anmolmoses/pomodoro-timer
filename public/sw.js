@@ -1,22 +1,19 @@
-// FocusFlow Service Worker — Cache-first strategy for offline support
-const CACHE_NAME = 'focusflow-v1';
+// Pomodoro PWA Service Worker
+const CACHE_NAME = 'pomodoro-v1';
+const PRECACHE_URLS = [
+  '/',
+  '/index.html',
+];
 
-// Install: cache app shell
+// Install — precache shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/manifest.json',
-        '/icon.svg',
-      ]);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate — clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -28,39 +25,18 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: cache-first, fallback to network, cache new responses
+// Fetch — network-first with cache fallback
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
-
-  // Skip chrome-extension and non-http requests
-  if (!event.request.url.startsWith('http')) return;
-
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          // Don't cache non-ok or opaque responses
-          if (!response || response.status !== 200) {
-            return response;
-          }
-
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // Offline fallback for navigation requests
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('Offline', { status: 503 });
-        });
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Cache successful GET responses
+        if (event.request.method === 'GET' && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
