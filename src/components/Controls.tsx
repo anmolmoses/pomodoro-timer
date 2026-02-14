@@ -1,158 +1,127 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { ControlsProps, TimerStatus } from '../types/index';
-
-/* Inline SVG icons — no icon library needed */
-
-const PlayIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 5.14v13.72a1 1 0 001.5.86l11.04-6.86a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z" />
-  </svg>
-);
-
-const PauseIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <rect x="6" y="4" width="4" height="16" rx="1" />
-    <rect x="14" y="4" width="4" height="16" rx="1" />
-  </svg>
-);
-
-const SkipIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M5 5.14v13.72a1 1 0 001.5.86l9.04-6.86a1 1 0 000-1.72L6.5 4.28A1 1 0 005 5.14z" />
-    <rect x="17" y="4" width="3" height="16" rx="1" />
-  </svg>
-);
-
-const ResetIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 12a9 9 0 109-9" />
-    <polyline points="3 3 3 9 9 9" />
-  </svg>
-);
-
-/* Animation variants for button groups */
-const containerVariants = {
-  enter: { opacity: 0, y: 12 },
-  center: { opacity: 1, y: 0, transition: { duration: 0.25, staggerChildren: 0.05 } },
-  exit: { opacity: 0, y: -12, transition: { duration: 0.15 } },
-};
-
-const buttonVariants = {
-  enter: { opacity: 0, scale: 0.9 },
-  center: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 25 } },
-  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.12 } },
-};
-
 /**
- * Controls — interactive control buttons that change layout based on timer status.
- * Uses glass-button class from glass.css and Framer Motion for micro-interactions.
+ * Controls — play/pause/reset/skip buttons.
+ * Uses shared ControlsProps type.
  */
-export default function Controls({ status, onStart, onPause, onResume, onReset, onSkip }: ControlsProps) {
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ControlsProps, TimerStatus, TimerPhase } from '../types';
+
+const btnBase =
+  'glass-button px-5 py-3 text-white font-medium flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent';
+
+const tap = { scale: 0.95 };
+const hover = { scale: 1.05 };
+
+export default function Controls({ status, phase, onStart, onPause, onResume, onReset, onSkip }: ControlsProps) {
+  const isIdle = status === TimerStatus.Idle;
+  const isRunning = status === TimerStatus.Running;
+  const isPaused = status === TimerStatus.Paused;
+  const hasStarted = phase !== TimerPhase.Idle;
+
   return (
-    <div className="flex items-center justify-center min-h-[56px]">
-      <AnimatePresence mode="wait">
-        {/* --- IDLE: single prominent Start button --- */}
-        {status === TimerStatus.Idle && (
-          <motion.div
-            key="idle"
-            variants={containerVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="flex gap-3"
+    <div className="flex items-center gap-3 mt-8">
+      {/* Primary action */}
+      {isIdle && !hasStarted && (
+        <motion.button
+          whileTap={tap}
+          whileHover={hover}
+          onClick={onStart}
+          className={`${btnBase} bg-purple-500/30 border-purple-400/30`}
+        >
+          <PlayIcon /> Start Focus
+        </motion.button>
+      )}
+
+      {isIdle && hasStarted && (
+        <motion.button
+          whileTap={tap}
+          whileHover={hover}
+          onClick={onStart}
+          className={`${btnBase} bg-purple-500/30 border-purple-400/30`}
+        >
+          <PlayIcon /> Start
+        </motion.button>
+      )}
+
+      {isRunning && (
+        <motion.button
+          whileTap={tap}
+          whileHover={hover}
+          onClick={onPause}
+          className={btnBase}
+        >
+          <PauseIcon /> Pause
+        </motion.button>
+      )}
+
+      {isPaused && (
+        <motion.button
+          whileTap={tap}
+          whileHover={hover}
+          onClick={onResume}
+          className={`${btnBase} bg-purple-500/30 border-purple-400/30`}
+        >
+          <PlayIcon /> Resume
+        </motion.button>
+      )}
+
+      {/* Secondary actions */}
+      {hasStarted && (
+        <>
+          <motion.button
+            whileTap={tap}
+            whileHover={hover}
+            onClick={onSkip}
+            className={`${btnBase} text-white/70`}
+            aria-label="Skip to next phase"
           >
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onStart}
-              className="glass-button px-8 py-3 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <PlayIcon />
-              <span>Start Focus</span>
-            </motion.button>
-          </motion.div>
-        )}
+            <SkipIcon />
+          </motion.button>
 
-        {/* --- RUNNING: Pause + Skip --- */}
-        {status === TimerStatus.Running && (
-          <motion.div
-            key="running"
-            variants={containerVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="flex gap-3"
+          <motion.button
+            whileTap={tap}
+            whileHover={hover}
+            onClick={onReset}
+            className={`${btnBase} text-white/70`}
+            aria-label="Reset timer"
           >
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onPause}
-              className="glass-button px-5 py-2.5 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <PauseIcon />
-              <span>Pause</span>
-            </motion.button>
-
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onSkip}
-              className="glass-button px-5 py-2.5 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <SkipIcon />
-              <span>Skip</span>
-            </motion.button>
-          </motion.div>
-        )}
-
-        {/* --- PAUSED: Resume + Reset + Skip --- */}
-        {status === TimerStatus.Paused && (
-          <motion.div
-            key="paused"
-            variants={containerVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className="flex gap-3"
-          >
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onResume}
-              className="glass-button px-5 py-2.5 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <PlayIcon />
-              <span>Resume</span>
-            </motion.button>
-
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onReset}
-              className="glass-button px-5 py-2.5 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <ResetIcon />
-              <span>Reset</span>
-            </motion.button>
-
-            <motion.button
-              variants={buttonVariants}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onSkip}
-              className="glass-button px-5 py-2.5 text-white/80 text-sm font-medium flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            >
-              <SkipIcon />
-              <span>Skip</span>
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <ResetIcon />
+          </motion.button>
+        </>
+      )}
     </div>
+  );
+}
+
+// Inline SVG icons (small, no deps needed)
+function PlayIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+  );
+}
+
+function SkipIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+    </svg>
+  );
+}
+
+function ResetIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+    </svg>
   );
 }

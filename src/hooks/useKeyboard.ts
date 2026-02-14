@@ -1,32 +1,38 @@
-import { useEffect, useRef } from 'react';
-import { useTimer } from '../contexts/TimerContext';
+/**
+ * useKeyboard — keyboard shortcuts for the timer.
+ * Space: toggle play/pause, R: reset, S: skip.
+ * Consumes PomodoroContext — NOT a separate context.
+ */
+import { useEffect } from 'react';
+import { usePomodoroContext } from '../context/PomodoroContext';
+import { TimerStatus, TimerPhase } from '../types';
 
-export function useKeyboard(onToast: (msg: string) => void) {
-  const { state, start, pause, reset, skip } = useTimer();
-  const shownRef = useRef(false);
+export function useKeyboard() {
+  const { state, start, pause, resume, reset, skip } = usePomodoroContext();
 
   useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      // Don't fire when typing in inputs
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    const handler = (e: KeyboardEvent) => {
+      // Don't capture when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (!shownRef.current) {
-          onToast('Press Space to pause');
-          shownRef.current = true;
+      switch (e.code) {
+        case 'Space': {
+          e.preventDefault();
+          if (state.status === TimerStatus.Running) pause();
+          else if (state.status === TimerStatus.Paused) resume();
+          else if (state.phase === TimerPhase.Idle) start();
+          break;
         }
-        if (state === 'running') pause();
-        else start();
-      } else if (e.code === 'KeyR') {
-        reset();
-      } else if (e.code === 'KeyS') {
-        if (state !== 'idle') skip();
+        case 'KeyR':
+          if (!e.metaKey && !e.ctrlKey) reset();
+          break;
+        case 'KeyS':
+          if (!e.metaKey && !e.ctrlKey && state.phase !== TimerPhase.Idle) skip();
+          break;
       }
-    }
+    };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, start, pause, reset, skip, onToast]);
+  }, [state.status, state.phase, start, pause, resume, reset, skip]);
 }

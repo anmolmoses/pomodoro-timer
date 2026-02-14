@@ -1,8 +1,7 @@
+// SHARED FOUNDATION — DO NOT MODIFY
 import { PomodoroSettings, DEFAULT_SETTINGS, TimerPhase, PHASE_LABELS } from '../types';
 
 const STORAGE_KEY = 'pomodoro-settings';
-
-// ---- Time Formatting ----
 
 export function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -13,8 +12,6 @@ export function formatTime(totalSeconds: number): string {
 export function minutesToSeconds(minutes: number): number {
   return minutes * 60;
 }
-
-// ---- Settings Persistence ----
 
 export function loadSettings(): PomodoroSettings {
   try {
@@ -30,8 +27,6 @@ export function saveSettings(settings: PomodoroSettings): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-// ---- Duration Lookup ----
-
 export function getPhaseDuration(phase: TimerPhase, settings: PomodoroSettings): number {
   switch (phase) {
     case TimerPhase.Focus: return minutesToSeconds(settings.focusDuration);
@@ -41,8 +36,6 @@ export function getPhaseDuration(phase: TimerPhase, settings: PomodoroSettings):
   }
 }
 
-// ---- Next Phase Logic ----
-
 export function getNextPhase(currentPhase: TimerPhase, completedSessions: number, longBreakInterval: number): TimerPhase {
   if (currentPhase === TimerPhase.Focus) {
     return (completedSessions + 1) % longBreakInterval === 0
@@ -51,8 +44,6 @@ export function getNextPhase(currentPhase: TimerPhase, completedSessions: number
   }
   return TimerPhase.Focus;
 }
-
-// ---- Notifications ----
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!('Notification' in window)) return false;
@@ -70,8 +61,6 @@ export function sendNotification(phase: TimerPhase): void {
   });
 }
 
-// ---- Audio ----
-
 let audioCtx: AudioContext | null = null;
 
 export function playChime(): void {
@@ -88,6 +77,6 @@ export function playChime(): void {
     osc.start();
     osc.stop(audioCtx.currentTime + 0.5);
   } catch {
-    // Silent fail — audio not critical
+    // Silent fail
   }
 }

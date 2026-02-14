@@ -1,122 +1,103 @@
-import { useRef } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import {
-  TimerRingProps,
-  TimerStatus,
-  PHASE_COLORS,
-  PHASE_LABELS,
-} from '../types';
+/**
+ * TimerRing — circular SVG progress ring with phase-colored stroke.
+ * Uses shared TimerRingProps. Accessible via role="progressbar".
+ */
+import React, { useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TimerRingProps, PHASE_COLORS, TimerStatus } from '../types';
 
-const RADIUS = 120;
-const STROKE_WIDTH = 8;
+const SIZE = 280;
+const STROKE = 8;
+const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const VIEW_SIZE = (RADIUS + STROKE_WIDTH) * 2;
-const CENTER = VIEW_SIZE / 2;
 
-export default function TimerRing({
-  progress,
-  phase,
-  displayTime,
-  phaseLabel,
-  status,
-}: TimerRingProps) {
-  const prefersReducedMotion = useReducedMotion();
+export default function TimerRing({ progress, phase, displayTime, phaseLabel, status }: TimerRingProps) {
   const colors = PHASE_COLORS[phase];
   const offset = CIRCUMFERENCE * (1 - progress);
+  const ariaRef = useRef<HTMLDivElement>(null);
   const lastAnnouncedRef = useRef(displayTime);
 
-  // Only update aria-live text every ~15s to avoid screen reader noise
-  const minutes = displayTime.split(':')[0];
-  const seconds = parseInt(displayTime.split(':')[1], 10);
-  if (seconds % 15 === 0 || displayTime !== lastAnnouncedRef.current) {
-    if (seconds % 15 === 0) {
+  // Announce time every 15 seconds for screen readers (not every tick)
+  useEffect(() => {
+    const seconds = parseInt(displayTime.split(':')[1], 10);
+    if (seconds % 15 === 0 && displayTime !== lastAnnouncedRef.current) {
       lastAnnouncedRef.current = displayTime;
+      if (ariaRef.current) {
+        ariaRef.current.textContent = `${phaseLabel}: ${displayTime} remaining`;
+      }
     }
-  }
-  const announceTime = lastAnnouncedRef.current;
-
-  const springTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.5, ease: 'easeInOut' as const };
-
-  const colorTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { duration: 0.6, ease: 'easeInOut' as const };
+  }, [displayTime, phaseLabel]);
 
   return (
-    <motion.div
-      className="relative flex items-center justify-center w-72 h-72 md:w-80 md:h-80"
-      animate={{ scale: status === TimerStatus.Running ? 1 : 0.95 }}
-      transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 20 }}
-    >
+    <div className="relative flex items-center justify-center">
       {/* Glow effect */}
-      <motion.div
-        className={`absolute inset-0 rounded-full ${prefersReducedMotion ? '' : 'animate-pulse-slow'}`}
-        style={{ filter: 'blur(40px)' }}
-        animate={{ backgroundColor: colors.glow }}
-        transition={colorTransition}
+      <div
+        className="absolute rounded-full transition-all duration-1000"
+        style={{
+          width: SIZE + 40,
+          height: SIZE + 40,
+          background: `radial-gradient(circle, ${colors.glow}, transparent 70%)`,
+          filter: 'blur(20px)',
+          opacity: status === TimerStatus.Running ? 0.6 : 0.2,
+        }}
       />
 
-      {/* SVG Ring */}
+      {/* SVG ring */}
       <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
+        width={SIZE}
+        height={SIZE}
+        className="-rotate-90"
         role="progressbar"
         aria-valuenow={Math.round(progress * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`${PHASE_LABELS[phase]} timer: ${displayTime} remaining`}
+        aria-label={`${phaseLabel} timer: ${displayTime} remaining`}
       >
-        {/* Background ring */}
+        {/* Background track */}
         <circle
-          cx={CENTER}
-          cy={CENTER}
+          cx={SIZE / 2}
+          cy={SIZE / 2}
           r={RADIUS}
           fill="none"
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth={STROKE_WIDTH}
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth={STROKE}
         />
-
-        {/* Progress ring */}
+        {/* Progress arc */}
         <motion.circle
-          cx={CENTER}
-          cy={CENTER}
+          cx={SIZE / 2}
+          cy={SIZE / 2}
           r={RADIUS}
           fill="none"
-          strokeWidth={STROKE_WIDTH}
+          stroke={colors.ring}
+          strokeWidth={STROKE}
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
-          animate={{
-            strokeDashoffset: offset,
-            stroke: colors.ring,
-          }}
-          transition={{
-            strokeDashoffset: springTransition,
-            stroke: colorTransition,
-          }}
-          transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ type: 'spring', stiffness: 60, damping: 15 }}
         />
       </svg>
 
       {/* Center text */}
-      <div className="relative z-10 flex flex-col items-center justify-center">
-        <div
-          aria-live="polite"
-          aria-atomic
-          className="font-mono text-5xl md:text-6xl font-bold text-white"
-        >
-          {announceTime}
-        </div>
-        <motion.div
-          className="text-white/60 text-sm uppercase tracking-widest mt-2"
-          animate={{ opacity: 1 }}
-          key={phaseLabel}
-          initial={{ opacity: 0 }}
-          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3 }}
-        >
-          {phaseLabel}
-        </motion.div>
+      <div className="absolute flex flex-col items-center justify-center">
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={phaseLabel}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3 }}
+            className="text-sm font-medium uppercase tracking-wider text-white/60 mb-1"
+          >
+            {phaseLabel}
+          </motion.span>
+        </AnimatePresence>
+        <span className="font-mono text-5xl md:text-6xl font-bold text-white tabular-nums">
+          {displayTime}
+        </span>
       </div>
-    </motion.div>
+
+      {/* Screen reader live region — updates every 15s */}
+      <div ref={ariaRef} aria-live="polite" className="sr-only" />
+    </div>
   );
 }

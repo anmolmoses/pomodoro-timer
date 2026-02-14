@@ -1,58 +1,45 @@
-import { motion } from 'framer-motion';
-import { SessionTrackerProps, TimerPhase, PHASE_COLORS } from '../types/index';
-
 /**
- * SessionTracker — horizontal row of dots showing Pomodoro session progress.
- * Filled dots use the current phase accent color; unfilled are translucent white.
- * The next unfilled dot pulses during Focus phase.
+ * SessionTracker — shows completed focus sessions as dots.
+ * Uses shared SessionTrackerProps. Dot fill uses clipPath wipe animation.
  */
-export default function SessionTracker({
-  completedSessions,
-  totalRequired,
-  currentPhase,
-}: SessionTrackerProps) {
-  // Resolve the accent color for filled dots from the shared PHASE_COLORS map
-  const phaseColors = PHASE_COLORS[currentPhase] ?? PHASE_COLORS[TimerPhase.Focus];
-  const accentColor = phaseColors.ring;
+import React from 'react';
+import { motion } from 'framer-motion';
+import { SessionTrackerProps, TimerPhase } from '../types';
 
+export default function SessionTracker({ completedSessions, totalRequired, currentPhase }: SessionTrackerProps) {
   return (
-    <div
-      className="flex items-center justify-center"
-      style={{ gap: '8px' }}
-      role="group"
-      aria-label={`Session progress: ${completedSessions} of ${totalRequired} completed`}
-    >
+    <div className="flex items-center gap-2 mt-6">
       {Array.from({ length: totalRequired }, (_, i) => {
-        const isFilled = i < completedSessions;
-        const isNext = i === completedSessions;
-        const shouldPulse = isNext && currentPhase === TimerPhase.Focus;
+        const filled = i < completedSessions;
+        const active = i === completedSessions && currentPhase === TimerPhase.Focus;
 
         return (
           <motion.div
             key={i}
-            /* Spring scale-up when a dot becomes filled */
-            initial={false}
+            className="relative w-3 h-3 rounded-full border border-white/30"
             animate={{
-              scale: isFilled ? [1, 1.4, 1] : 1,
-              backgroundColor: isFilled ? accentColor : 'rgba(255, 255, 255, 0.2)',
+              scale: active ? [1, 1.2, 1] : 1,
             }}
-            transition={
-              isFilled
-                ? { type: 'spring', stiffness: 500, damping: 15, duration: 0.4 }
-                : { duration: 0.3 }
-            }
-            className={`w-2.5 h-2.5 rounded-full${
-              shouldPulse ? ' animate-pulse' : ''
-            }`}
-            style={{
-              backgroundColor: isFilled ? accentColor : 'rgba(255, 255, 255, 0.2)',
-              /* Subtle glow on filled dots */
-              boxShadow: isFilled ? `0 0 6px ${accentColor}80` : 'none',
+            transition={{
+              repeat: active ? Infinity : 0,
+              duration: 2,
             }}
-            aria-label={`Session ${i + 1}: ${isFilled ? 'completed' : isNext ? 'current' : 'upcoming'}`}
-          />
+          >
+            {/* Fill layer with clip wipe */}
+            <motion.div
+              className="absolute inset-0 rounded-full bg-purple-400"
+              initial={{ clipPath: 'inset(0 100% 0 0)' }}
+              animate={{
+                clipPath: filled ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)',
+              }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </motion.div>
         );
       })}
+      <span className="text-xs text-white/40 ml-2 font-medium">
+        {completedSessions}/{totalRequired}
+      </span>
     </div>
   );
 }

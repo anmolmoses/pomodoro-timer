@@ -1,4 +1,6 @@
-// ============ ENUMS ============
+// SHARED FOUNDATION — DO NOT MODIFY
+// This file is managed by the Tech Lead
+// Re-exported here for reference; actual source is the foundation commit
 
 export enum TimerPhase {
   Idle = 'idle',
@@ -13,13 +15,11 @@ export enum TimerStatus {
   Paused = 'paused',
 }
 
-// ============ SETTINGS ============
-
 export interface PomodoroSettings {
-  focusDuration: number;      // minutes
-  shortBreakDuration: number; // minutes
-  longBreakDuration: number;  // minutes
-  longBreakInterval: number;  // number of focus sessions before long break
+  focusDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
+  longBreakInterval: number;
   autoStartBreaks: boolean;
   autoStartFocus: boolean;
   notificationsEnabled: boolean;
@@ -37,20 +37,13 @@ export const DEFAULT_SETTINGS: PomodoroSettings = {
   soundEnabled: true,
 };
 
-// ============ TIMER STATE ============
-
 export interface TimerState {
   phase: TimerPhase;
   status: TimerStatus;
-  /** Total seconds for the current phase */
   totalSeconds: number;
-  /** Seconds remaining in the current phase */
   remainingSeconds: number;
-  /** Completed focus sessions in current cycle (resets after long break) */
   completedSessions: number;
-  /** Total focus sessions completed across all cycles */
   totalCompletedSessions: number;
-  /** Timestamp (ms) when the timer was last started/resumed — used for drift correction */
   lastTickTimestamp: number | null;
 }
 
@@ -64,8 +57,6 @@ export const INITIAL_TIMER_STATE: TimerState = {
   lastTickTimestamp: null,
 };
 
-// ============ REDUCER ACTIONS ============
-
 export type TimerAction =
   | { type: 'START'; payload: { phase: TimerPhase; durationSeconds: number } }
   | { type: 'PAUSE' }
@@ -76,18 +67,12 @@ export type TimerAction =
   | { type: 'PHASE_COMPLETE' }
   | { type: 'SET_REMAINING'; payload: { remaining: number } };
 
-// ============ CONTEXT ============
-
 export interface PomodoroContextValue {
   state: TimerState;
   settings: PomodoroSettings;
-  /** Progress from 0 (just started) to 1 (complete) */
   progress: number;
-  /** Formatted time string "MM:SS" */
   displayTime: string;
-  /** Human-readable phase label */
   phaseLabel: string;
-  // Actions
   start: () => void;
   pause: () => void;
   resume: () => void;
@@ -96,10 +81,8 @@ export interface PomodoroContextValue {
   updateSettings: (patch: Partial<PomodoroSettings>) => void;
 }
 
-// ============ COMPONENT PROPS ============
-
 export interface TimerRingProps {
-  progress: number;         // 0 to 1
+  progress: number;
   phase: TimerPhase;
   displayTime: string;
   phaseLabel: string;
@@ -118,7 +101,7 @@ export interface ControlsProps {
 
 export interface SessionTrackerProps {
   completedSessions: number;
-  totalRequired: number;    // longBreakInterval
+  totalRequired: number;
   currentPhase: TimerPhase;
 }
 
@@ -128,8 +111,6 @@ export interface SettingsModalProps {
   settings: PomodoroSettings;
   onUpdate: (patch: Partial<PomodoroSettings>) => void;
 }
-
-// ============ THEME / COLORS ============
 
 export const PHASE_COLORS: Record<TimerPhase, { ring: string; glow: string; accent: string }> = {
   [TimerPhase.Idle]:       { ring: '#94a3b8', glow: 'rgba(148,163,184,0.3)', accent: 'slate' },

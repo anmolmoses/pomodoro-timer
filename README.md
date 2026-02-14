@@ -1,16 +1,43 @@
-# FocusFlow — Pomodoro Timer
+# Pomodoro Timer
 
-A beautiful, glassmorphic Pomodoro timer built with React, Framer Motion, and Tailwind CSS.
+A beautiful glassmorphic Pomodoro timer built with React, TypeScript, Framer Motion, and Tailwind CSS.
+
+## Architecture
+
+**Single provider pattern** — `PomodoroProvider` is the only context provider. There is no separate `SettingsProvider`, `TimerProvider`, or `Layout.tsx`. All components consume `usePomodoroContext()` directly.
+
+### File Structure
+
+```
+src/
+├── types/index.ts          # Shared foundation types (DO NOT MODIFY)
+├── utils/index.ts           # Shared utilities (DO NOT MODIFY)
+├── styles/glass.css         # Glassmorphic CSS classes
+├── index.css                # Tailwind + global styles
+├── reducer/timerReducer.ts  # Timer state reducer
+├── context/PomodoroContext.tsx  # Single context provider
+├── components/
+│   ├── TimerRing.tsx        # SVG progress ring
+│   ├── Controls.tsx         # Play/pause/reset/skip buttons
+│   ├── SessionTracker.tsx   # Session completion dots
+│   └── SettingsModal.tsx    # Settings configuration modal
+├── hooks/useKeyboard.ts     # Keyboard shortcuts
+├── App.tsx                  # Root component (mounts PomodoroProvider)
+└── main.tsx                 # Entry point
+```
 
 ## Features
 
-- **Circular progress ring** with smooth SVG animations
-- **Dark/light theme** with localStorage persistence
-- **Keyboard shortcuts**: Space (start/pause), R (reset), S (skip)
-- **Responsive design** with mobile bottom tab bar
-- **Settings panel** with slide-out animation
-- **Session celebration** overlay on completion
-- **Onboarding tooltip** for first-time users
+- ⏱️ Configurable focus/break durations
+- 🔄 Auto-transitions between phases
+- 🎵 Audio chime on phase completion
+- 🔔 Browser notifications
+- ⌨️ Keyboard shortcuts (Space, R, S)
+- ♿ Accessible (ARIA progressbar, live regions, focus rings)
+- 🎨 Dark glassmorphism design with animated mesh background
+- 📱 Responsive (mobile sheet pattern for settings)
+- 🎬 Smooth Framer Motion animations
+- ⚡ Timestamp-based timing (no setInterval drift)
 
 ## Getting Started
 
@@ -19,15 +46,10 @@ npm install
 npm run dev
 ```
 
-## Design System
+## Keyboard Shortcuts
 
-- **Fonts**: Inter (UI), JetBrains Mono (timer digits)
-- **Colors**: Deep navy base (#0F0F1A) with purple (#6C5CE7) and teal (#00D2D3) accents
-- **Style**: Glassmorphism inspired by Linear and Arc
-
-## Tech Stack
-
-- React 18 + TypeScript
-- Vite
-- Tailwind CSS 3
-- Framer Motion 11
+| Key   | Action            |
+|-------|-------------------|
+| Space | Start/Pause/Resume|
+| R     | Reset             |
+| S     | Skip phase        |

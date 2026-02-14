@@ -1,200 +1,123 @@
-import React, { useCallback, useEffect } from 'react';
+/**
+ * SettingsModal — glassmorphic modal for configuring timer settings.
+ * Slide-up sheet on mobile, fade-scale on desktop.
+ * Uses shared SettingsModalProps.
+ */
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SettingsModalProps, PomodoroSettings } from '../types';
 
-/** Toggle switch component */
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between py-2 cursor-pointer group">
-      <span className="text-sm text-white/80 group-hover:text-white transition-colors">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent ${
-          checked
-            ? 'bg-rose-500/60 border-rose-400/40'
-            : 'bg-white/10 border-white/20'
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
-            checked ? 'translate-x-5' : 'translate-x-1'
-          }`}
-        />
-      </button>
-    </label>
-  );
-}
-
-/** Range slider component */
-function Slider({
-  label,
-  value,
-  min,
-  max,
-  unit,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  unit?: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="py-2">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-white/80">{label}</span>
-        <span className="text-sm font-mono text-white/90 bg-white/10 px-2 py-0.5 rounded-md">
-          {value}{unit && ` ${unit}`}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full cursor-pointer"
-      />
-    </div>
-  );
-}
-
 export default function SettingsModal({ isOpen, onClose, settings, onUpdate }: SettingsModalProps) {
-  // Close on Escape
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose],
-  );
+  const [local, setLocal] = useState<PomodoroSettings>(settings);
 
+  // Sync when modal opens
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, handleKeyDown]);
+    if (isOpen) setLocal(settings);
+  }, [isOpen, settings]);
 
-  const update = <K extends keyof PomodoroSettings>(key: K, value: PomodoroSettings[K]) => {
-    onUpdate({ [key]: value });
+  const handleSave = () => {
+    onUpdate(local);
+    onClose();
+  };
+
+  const set = <K extends keyof PomodoroSettings>(key: K, value: PomodoroSettings[K]) => {
+    setLocal((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <>
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={onClose}
           />
 
-          {/* Modal card */}
+          {/* Modal */}
           <motion.div
-            className="glass relative w-full max-w-md max-h-[85vh] overflow-y-auto p-6 z-10"
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 40 }}
+            className="fixed z-50 inset-x-4 bottom-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[440px] glass p-6"
+            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-white">Settings</h2>
+            <h2 className="text-lg font-semibold text-white mb-5">Settings</h2>
+
+            <div className="space-y-4">
+              {/* Duration inputs */}
+              <NumberField label="Focus (min)" value={local.focusDuration} onChange={(v) => set('focusDuration', v)} min={1} max={120} />
+              <NumberField label="Short Break (min)" value={local.shortBreakDuration} onChange={(v) => set('shortBreakDuration', v)} min={1} max={30} />
+              <NumberField label="Long Break (min)" value={local.longBreakDuration} onChange={(v) => set('longBreakDuration', v)} min={1} max={60} />
+              <NumberField label="Sessions before long break" value={local.longBreakInterval} onChange={(v) => set('longBreakInterval', v)} min={2} max={10} />
+
+              {/* Toggles */}
+              <Toggle label="Auto-start breaks" checked={local.autoStartBreaks} onChange={(v) => set('autoStartBreaks', v)} />
+              <Toggle label="Auto-start focus" checked={local.autoStartFocus} onChange={(v) => set('autoStartFocus', v)} />
+              <Toggle label="Notifications" checked={local.notificationsEnabled} onChange={(v) => set('notificationsEnabled', v)} />
+              <Toggle label="Sound" checked={local.soundEnabled} onChange={(v) => set('soundEnabled', v)} />
+            </div>
+
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent"
-                aria-label="Close settings"
+                className="glass-button flex-1 py-2.5 text-white/70 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="glass-button flex-1 py-2.5 bg-purple-500/30 border-purple-400/30 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent"
+              >
+                Save
               </button>
             </div>
-
-            {/* Duration sliders */}
-            <div className="space-y-1 mb-6">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-white/50 mb-3">Durations</h3>
-              <Slider
-                label="Focus Duration"
-                value={settings.focusDuration}
-                min={1}
-                max={60}
-                unit="min"
-                onChange={(v) => update('focusDuration', v)}
-              />
-              <Slider
-                label="Short Break"
-                value={settings.shortBreakDuration}
-                min={1}
-                max={30}
-                unit="min"
-                onChange={(v) => update('shortBreakDuration', v)}
-              />
-              <Slider
-                label="Long Break"
-                value={settings.longBreakDuration}
-                min={1}
-                max={60}
-                unit="min"
-                onChange={(v) => update('longBreakDuration', v)}
-              />
-              <Slider
-                label="Sessions before long break"
-                value={settings.longBreakInterval}
-                min={1}
-                max={10}
-                onChange={(v) => update('longBreakInterval', v)}
-              />
-            </div>
-
-            {/* Toggles */}
-            <div className="space-y-1">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-white/50 mb-3">Preferences</h3>
-              <Toggle
-                label="Auto-start breaks"
-                checked={settings.autoStartBreaks}
-                onChange={(v) => update('autoStartBreaks', v)}
-              />
-              <Toggle
-                label="Auto-start focus"
-                checked={settings.autoStartFocus}
-                onChange={(v) => update('autoStartFocus', v)}
-              />
-              <Toggle
-                label="Notifications"
-                checked={settings.notificationsEnabled}
-                onChange={(v) => update('notificationsEnabled', v)}
-              />
-              <Toggle
-                label="Sound"
-                checked={settings.soundEnabled}
-                onChange={(v) => update('soundEnabled', v)}
-              />
-            </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
+  );
+}
+
+// --- Sub-components ---
+
+function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <label className="text-sm text-white/70">{label}</label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Math.min(max, Math.max(min, parseInt(e.target.value) || min)))}
+        min={min}
+        max={max}
+        className="w-20 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-400"
+      />
+    </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-white/70">{label}</span>
+      <button
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent ${
+          checked ? 'bg-purple-500' : 'bg-white/20'
+        }`}
+      >
+        <motion.div
+          className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"
+          animate={{ x: checked ? 20 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        />
+      </button>
+    </div>
   );
 }

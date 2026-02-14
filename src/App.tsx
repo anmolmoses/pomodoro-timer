@@ -1,32 +1,19 @@
+/**
+ * App.tsx — root component.
+ * Mounts PomodoroProvider as the SINGLE context provider.
+ * No Layout.tsx, no separate SettingsProvider or TimerProvider.
+ * All components consume PomodoroContext directly.
+ */
 import React, { useState } from 'react';
-import { PomodoroProvider, usePomodoro } from './context/PomodoroProvider';
-import Background from './components/Background';
+import { PomodoroProvider, usePomodoroContext } from './context/PomodoroContext';
 import TimerRing from './components/TimerRing';
 import Controls from './components/Controls';
 import SessionTracker from './components/SessionTracker';
 import SettingsModal from './components/SettingsModal';
+import { useKeyboard } from './hooks/useKeyboard';
+import './styles/glass.css';
 
-/** Gear icon SVG */
-function GearIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-/** Inner app content that consumes the Pomodoro context */
+/** Inner app that consumes the Pomodoro context */
 function AppContent() {
   const {
     state,
@@ -40,26 +27,18 @@ function AppContent() {
     reset,
     skip,
     updateSettings,
-  } = usePomodoro();
+  } = usePomodoroContext();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Keyboard shortcuts
+  useKeyboard();
+
   return (
-    <>
-      <Background phase={state.phase} />
-
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-8">
-        {/* Settings gear button — top right */}
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="fixed top-4 right-4 z-40 w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 active:scale-95 transition-all duration-200 text-white/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent"
-          aria-label="Open settings"
-        >
-          <GearIcon />
-        </button>
-
-        {/* Main card */}
-        <div className="glass w-full max-w-md p-6 sm:p-8 flex flex-col items-center gap-6">
+    <div className="bg-mesh">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8">
+        {/* Main timer card */}
+        <div className="glass p-8 md:p-12 flex flex-col items-center max-w-md w-full">
           <TimerRing
             progress={progress}
             phase={state.phase}
@@ -84,22 +63,41 @@ function AppContent() {
             currentPhase={state.phase}
           />
         </div>
-      </div>
 
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        settings={settings}
-        onUpdate={updateSettings}
-      />
-    </>
+        {/* Settings button */}
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="mt-6 glass-button px-4 py-2 text-white/50 text-sm hover:text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent"
+          aria-label="Open settings"
+        >
+          <SettingsIcon /> Settings
+        </button>
+
+        {/* Settings modal */}
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          settings={settings}
+          onUpdate={updateSettings}
+        />
+      </div>
+    </div>
   );
 }
 
+/** Root — wraps everything in PomodoroProvider */
 export default function App() {
   return (
     <PomodoroProvider>
       <AppContent />
     </PomodoroProvider>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="inline mr-1.5">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z" />
+    </svg>
   );
 }
