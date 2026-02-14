@@ -1,39 +1,41 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
-
-:root {
-  --color-primary: #6C5CE7;
-  --color-secondary: #00D2D3;
-  --color-background: #F5F5FA;
-  --color-surface: #FFFFFF;
-  --color-text: #1A1A2E;
-  --color-text-muted: #6B6B80;
+/* Custom range slider styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
 }
 
-.dark {
-  --color-background: #0F0F1A;
-  --color-surface: #1A1A2E;
-  --color-text: #E8E8F0;
-  --color-text-muted: #6B6B80;
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f43f5e;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
 }
 
-html {
-  font-family: 'Inter', system-ui, sans-serif;
+input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f43f5e;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.4);
 }
 
-.font-mono {
-  font-family: 'JetBrains Mono', monospace;
-}
-
-/* Flame animation for streak */
-@keyframes flame {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
-}
-
-.animate-flame {
-  animation: flame 1.5s ease-in-out infinite;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .bg-mesh::before,
+  .bg-mesh::after {
+    animation: none !important;
+  }
 }
