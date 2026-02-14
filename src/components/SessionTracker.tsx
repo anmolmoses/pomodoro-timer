@@ -12,7 +12,8 @@ export default function SessionTracker({
   currentPhase,
 }: SessionTrackerProps) {
   // Resolve the accent color for filled dots from the shared PHASE_COLORS map
-  const accentColor = PHASE_COLORS[currentPhase] ?? PHASE_COLORS[TimerPhase.Focus];
+  const phaseColors = PHASE_COLORS[currentPhase] ?? PHASE_COLORS[TimerPhase.Focus];
+  const accentColor = phaseColors.ring;
 
   return (
     <div
