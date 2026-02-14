@@ -1,3 +1,6 @@
-// StatsPanel removed — was dead code depending on orphaned context providers.
-// Session tracking is handled inline by SessionTracker component.
-export {};
+// DEPRECATED: Was part of Layout.tsx alternate UI tree
+// Session tracking is handled by PomodoroProvider state
+
+export default function StatsPanel() {
+  return null;
+}
