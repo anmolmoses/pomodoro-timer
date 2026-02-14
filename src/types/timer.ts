@@ -1,78 +1,65 @@
-export type TimerState = 'idle' | 'running' | 'paused' | 'completed' | 'break';
+/**
+ * Timer-specific type aliases and additional types.
+ *
+ * Re-exports core types from the shared foundation (src/types/index.ts)
+ * under consumer-expected names, and defines supplementary types
+ * required by hooks and context that aren't part of the foundation.
+ */
 
-export type TimerPhase = 'work' | 'shortBreak' | 'longBreak';
+import {
+  TimerState as _TimerState,
+  TimerPhase,
+  TimerStatus,
+  PomodoroSettings,
+  PomodoroContextValue,
+  DEFAULT_SETTINGS,
+} from './index';
 
-export interface TimerSettings {
-  workDuration: number;          // minutes
-  shortBreakDuration: number;    // minutes
-  longBreakDuration: number;     // minutes
-  shortBreak: number;            // alias — minutes (used by useTimer hook)
-  longBreak: number;             // alias — minutes (used by useTimer hook)
-  longBreakInterval: number;     // every Nth work session triggers long break
+// ============ RE-EXPORTS ============
+
+/** Re-export TimerState as-is for consumers that import from this file */
+export type TimerState = _TimerState;
+
+/** Alias: some consumers reference settings as TimerSettings */
+export type TimerSettings = PomodoroSettings;
+
+/** Alias: TimerContext consumers import TimerContextValue */
+export type TimerContextValue = PomodoroContextValue;
+
+/** Re-export DEFAULT_SETTINGS so existing consumers don't break */
+export { DEFAULT_SETTINGS };
+
+// ============ WORKER MESSAGES ============
+
+/** Messages sent FROM the timer web worker back to the main thread */
+export type WorkerOutMessage =
+  | { type: 'TICK'; payload: { now: number } }
+  | { type: 'PHASE_COMPLETE' }
+  | { type: 'SYNC'; payload: { remainingSeconds: number } };
+
+/** Messages sent TO the timer web worker from the main thread */
+export type WorkerInMessage =
+  | { type: 'START'; payload: { durationSeconds: number; startedAt: number } }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME'; payload: { startedAt: number } }
+  | { type: 'STOP' };
+
+// ============ STATS ============
+
+/** Breakdown of focus stats for a single day */
+export interface DailyBreakdown {
+  date: string; // ISO date string YYYY-MM-DD
+  focusSessions: number;
+  totalFocusMinutes: number;
+  phases: Record<TimerPhase, number>; // minutes per phase
 }
 
-export const DEFAULT_SETTINGS: TimerSettings = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
-  shortBreak: 5,
-  longBreak: 15,
-  longBreakInterval: 4,
-};
-
-export interface TimerSession {
-  id: string;
-  startedAt: string;   // ISO string
-  completedAt: string; // ISO string
-  duration: number;    // planned duration in seconds
-  elapsed: number;     // actual elapsed seconds
-  type: 'work' | 'break';
-  completed: boolean;
-}
-
+/** Aggregated statistics overview */
 export interface StatsOverview {
   totalSessions: number;
-  totalMinutes: number;
-  todaySessions: number;
-  todayMinutes: number;
-  averagePerDay: number;
-}
-
-export interface DailyBreakdown {
-  date: string;
-  sessions: number;
-  minutes: number;
-}
-
-export interface SettingsContextValue {
-  settings: TimerSettings;
-  updateSettings: (patch: Partial<TimerSettings>) => void;
-}
-
-// Messages sent TO the worker
-export type WorkerInMessage =
-  | { type: 'START'; duration: number }
-  | { type: 'PAUSE' }
-  | { type: 'RESUME' }
-  | { type: 'RESET' };
-
-// Messages sent FROM the worker
-export type WorkerOutMessage =
-  | { type: 'TICK'; remaining: number }
-  | { type: 'COMPLETE' };
-
-export interface TimerContextValue {
-  remaining: number;
-  totalDuration: number;
-  state: TimerState;
-  sessionCount: number;
-  sessionsCompleted: number;
-  settings: TimerSettings;
-  setSettings: (s: Partial<TimerSettings>) => void;
-  start: () => void;
-  pause: () => void;
-  resume: () => void;
-  reset: () => void;
-  skip: () => void;
-  showCelebration: boolean;
+  totalFocusMinutes: number;
+  currentStreak: number; // consecutive days with >= 1 focus session
+  longestStreak: number;
+  averageDailyMinutes: number;
+  dailyBreakdowns: DailyBreakdown[];
 }
