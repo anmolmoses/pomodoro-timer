@@ -6,7 +6,6 @@ import Controls from './components/Controls';
 import SessionTracker from './components/SessionTracker';
 import SettingsModal from './components/SettingsModal';
 import Celebration from './components/Celebration';
-import Toast from './components/Toast';
 
 /** Gear icon SVG */
 function GearIcon() {
@@ -45,20 +44,18 @@ function AppContent() {
   } = usePomodoro();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [toast, setToast] = useState<{ message: string; visible: boolean }>({
-    message: '',
-    visible: false,
-  });
-
-  /** Show a toast notification for a short duration */
-  const showToast = (message: string) => {
-    setToast({ message, visible: true });
-    setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2500);
-  };
 
   return (
     <>
       <Background phase={state.phase} />
+
+      {/* Celebration overlay — triggers on session completion */}
+      <Celebration
+        phase={state.phase}
+        status={state.status}
+        totalCompletedSessions={state.totalCompletedSessions}
+        soundEnabled={settings.soundEnabled}
+      />
 
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-8">
         {/* Settings gear button — top right */}
@@ -97,17 +94,6 @@ function AppContent() {
           />
         </div>
       </div>
-
-      {/* Celebration overlay on session complete */}
-      <Celebration
-        phase={state.phase}
-        status={state.status}
-        totalCompletedSessions={state.totalCompletedSessions}
-        soundEnabled={settings.soundEnabled}
-      />
-
-      {/* Toast notifications */}
-      <Toast message={toast.message} visible={toast.visible} />
 
       <SettingsModal
         isOpen={settingsOpen}
