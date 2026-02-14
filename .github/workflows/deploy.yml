@@ -19,31 +19,46 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f yarn.lock ]; then
+            yarn install --frozen-lockfile
+          elif [ -f package.json ]; then
+            npm install
+          fi
 
       - name: Build
         run: npm run build
 
-      - name: Verify build output
+      - name: Check publish directory
         run: |
-          if [ -d dist ]; then
-            echo '✅ dist/ exists'
-            ls -la dist/
-          elif [ -d build ]; then
-            echo '✅ build/ exists'
-            ls -la build/
-          elif [ -f index.html ]; then
-            echo '✅ index.html in root'
+          PUBLISH_DIR="./dist"
+          if [ ! -d "$PUBLISH_DIR" ] && [ "$PUBLISH_DIR" != "./" ] && [ "$PUBLISH_DIR" != "." ]; then
+            echo "⚠️ Publish dir '$PUBLISH_DIR' not found. Checking alternatives..."
+            for dir in dist build out public .; do
+              if [ -d "$dir" ] && [ -f "$dir/index.html" ]; then
+                echo "✅ Found '$dir' with index.html"
+                echo "PUBLISH_DIR=$dir" >> $GITHUB_ENV
+                exit 0
+              fi
+            done
+            if [ -f "index.html" ]; then
+              echo "✅ Found index.html in root"
+              echo "PUBLISH_DIR=." >> $GITHUB_ENV
+            else
+              echo "❌ No deployable directory found"
+              ls -la
+              exit 1
+            fi
           else
-            echo '❌ No build output found'
-            ls -la
-            exit 1
+            echo "PUBLISH_DIR=$PUBLISH_DIR" >> $GITHUB_ENV
           fi
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3
         with:
-          publish-dir: './dist'
+          publish-dir: ${{ env.PUBLISH_DIR || './dist' }}
           production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
