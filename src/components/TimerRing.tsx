@@ -1,85 +1,122 @@
-import { motion } from 'framer-motion';
-import { useTimer } from '../contexts/TimerContext';
-import { PHASE_LABELS } from '../types/timer';
+import { useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+  TimerRingProps,
+  TimerStatus,
+  PHASE_COLORS,
+  PHASE_LABELS,
+} from '../types';
 
-const SIZE = 280;
-const STROKE = 8;
-const RADIUS = (SIZE - STROKE) / 2;
+const RADIUS = 120;
+const STROKE_WIDTH = 8;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const VIEW_SIZE = (RADIUS + STROKE_WIDTH) * 2;
+const CENTER = VIEW_SIZE / 2;
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-const PHASE_COLORS = {
-  work: '#6C5CE7',
-  shortBreak: '#00D2D3',
-  longBreak: '#F9CA24',
-};
-
-const GLOW_SHADOWS = {
-  work: '0 0 40px rgba(108, 92, 231, 0.3)',
-  shortBreak: '0 0 40px rgba(0, 210, 211, 0.3)',
-  longBreak: '0 0 40px rgba(249, 202, 36, 0.3)',
-};
-
-export default function TimerRing() {
-  const { remaining, total, phase, state } = useTimer();
-  const progress = total > 0 ? remaining / total : 1;
+export default function TimerRing({
+  progress,
+  phase,
+  displayTime,
+  phaseLabel,
+  status,
+}: TimerRingProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const colors = PHASE_COLORS[phase];
   const offset = CIRCUMFERENCE * (1 - progress);
-  const color = state === 'paused' ? '#FF9F43' : PHASE_COLORS[phase];
-  const glowColor = state === 'paused'
-    ? '0 0 40px rgba(255, 159, 67, 0.3)'
-    : GLOW_SHADOWS[phase];
+  const lastAnnouncedRef = useRef(displayTime);
+
+  // Only update aria-live text every ~15s to avoid screen reader noise
+  const minutes = displayTime.split(':')[0];
+  const seconds = parseInt(displayTime.split(':')[1], 10);
+  if (seconds % 15 === 0 || displayTime !== lastAnnouncedRef.current) {
+    if (seconds % 15 === 0) {
+      lastAnnouncedRef.current = displayTime;
+    }
+  }
+  const announceTime = lastAnnouncedRef.current;
+
+  const springTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.5, ease: 'easeInOut' as const };
+
+  const colorTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.6, ease: 'easeInOut' as const };
 
   return (
-    <div className="relative flex flex-col items-center justify-center" style={{ width: SIZE, height: SIZE }}>
+    <motion.div
+      className="relative flex items-center justify-center w-72 h-72 md:w-80 md:h-80"
+      animate={{ scale: status === TimerStatus.Running ? 1 : 0.95 }}
+      transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 20 }}
+    >
       {/* Glow effect */}
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{ boxShadow: glowColor, transition: 'box-shadow 0.6s ease' }}
+      <motion.div
+        className={`absolute inset-0 rounded-full ${prefersReducedMotion ? '' : 'animate-pulse-slow'}`}
+        style={{ filter: 'blur(40px)' }}
+        animate={{ backgroundColor: colors.glow }}
+        transition={colorTransition}
       />
 
-      <svg width={SIZE} height={SIZE} className="-rotate-90">
-        {/* Background track */}
+      {/* SVG Ring */}
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
+        role="progressbar"
+        aria-valuenow={Math.round(progress * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${PHASE_LABELS[phase]} timer: ${displayTime} remaining`}
+      >
+        {/* Background ring */}
         <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
+          cx={CENTER}
+          cy={CENTER}
           r={RADIUS}
           fill="none"
-          stroke="currentColor"
-          className="text-border dark:text-[#2A2A45] text-gray-200"
-          strokeWidth={STROKE}
+          stroke="rgba(255,255,255,0.1)"
+          strokeWidth={STROKE_WIDTH}
         />
+
         {/* Progress ring */}
         <motion.circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
+          cx={CENTER}
+          cy={CENTER}
           r={RADIUS}
           fill="none"
-          stroke={color}
-          strokeWidth={STROKE}
+          strokeWidth={STROKE_WIDTH}
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          animate={{
+            strokeDashoffset: offset,
+            stroke: colors.ring,
+          }}
+          transition={{
+            strokeDashoffset: springTransition,
+            stroke: colorTransition,
+          }}
+          transform={`rotate(-90 ${CENTER} ${CENTER})`}
         />
       </svg>
 
       {/* Center text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className="font-mono text-text dark:text-[#E8E8F0] text-[#1A1A2E] tabular-nums"
-          style={{ fontSize: '72px', lineHeight: '80px', fontWeight: 700 }}
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        <div
+          aria-live="polite"
+          aria-atomic
+          className="font-mono text-5xl md:text-6xl font-bold text-white"
         >
-          {formatTime(remaining)}
-        </span>
-        <span className="text-textMuted dark:text-[#6B6B80] text-gray-500 text-sm font-semibold mt-1 uppercase tracking-wider">
-          {PHASE_LABELS[phase]}
-        </span>
+          {announceTime}
+        </div>
+        <motion.div
+          className="text-white/60 text-sm uppercase tracking-widest mt-2"
+          animate={{ opacity: 1 }}
+          key={phaseLabel}
+          initial={{ opacity: 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3 }}
+        >
+          {phaseLabel}
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
